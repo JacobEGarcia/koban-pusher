@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>KOBAN PUSHER - the Lucky Cat arcade</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Hiragino Mincho ProN','Yu Mincho',Georgia,'Times New Roman',serif;background:radial-gradient(ellipse at 50% 20%,#4a2030 0%,#24101a 60%,#140910 100%);
+    color:#ffe9c8;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;touch-action:none;
+  }
+  #brand{text-align:left;margin-bottom:8px;z-index:2;width:min(94vw,480px);position:relative}
+  #brand .vert{position:absolute;right:-34px;top:-8px;writing-mode:vertical-rl;white-space:nowrap;font-size:15px;letter-spacing:10px;color:#c8a060;opacity:.85}
+  @media (max-width:560px){#brand .vert{display:none}}
+  #brand h1{font-size:clamp(20px,4.2vw,30px);letter-spacing:12px;font-weight:normal;color:#f0d8a8;text-shadow:0 0 14px rgba(255,160,60,.22)}
+  #brand p{font-size:11px;letter-spacing:4px;color:#d8a878;margin-top:4px}
+  #hud{display:flex;gap:10px;font-size:13px;letter-spacing:1px;margin-bottom:8px;z-index:2;flex-wrap:wrap;justify-content:flex-start;width:min(94vw,480px);padding-right:104px;box-sizing:border-box}
+  #hud b{color:#ffd24a;font-size:19px;margin-left:6px}
+  #wrap{position:relative;z-index:2}
+  canvas{display:block;width:min(94vw,480px,calc(64vh * 0.686));height:auto;border-radius:14px;box-shadow:0 22px 50px rgba(0,0,0,.55);touch-action:none}
+  #shareBtn{
+    margin-top:12px;padding:11px 30px;font-family:inherit;font-size:13px;letter-spacing:3px;border-radius:30px;cursor:pointer;
+    background:linear-gradient(180deg,#c8302e,#8e1f1f);color:#ffe9c8;border:2px solid #ffd28a;
+  }
+  #shareBtn:active{transform:scale(.96)}
+  #foot{margin-top:10px;font-size:11px;letter-spacing:2px;color:#a87858;text-align:center}
+  #mascot{position:absolute;right:-2px;top:-34px;width:76px;z-index:3;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));animation:breathe 3.6s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.022)}}
+  #mascot .mpaw{animation:mwave 1.1s ease-in-out infinite;transform-origin:62px 126px}
+  #meyes{animation:blinkopen 4.2s step-end infinite}
+  #mblink{animation:blinkshut 4.2s step-end infinite}
+  @keyframes blinkopen{0%,93%{opacity:1}94%,100%{opacity:0}}
+  @keyframes blinkshut{0%,93%{opacity:0}94%,100%{opacity:1}}
+  @keyframes mwave{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-24deg)}}
+  .fever #mascot .mpaw{animation-duration:.28s}
+  #bark{position:absolute;right:74px;top:-46px;max-width:170px;background:#fff8ec;color:#3a1c14;border:2px solid #d8a838;border-radius:12px;padding:7px 10px;font-size:12px;line-height:1.35;display:none;z-index:4;transform:rotate(-2deg)}
+  #feverBadge{display:none;color:#ff5a4a;animation:fblink .4s step-end infinite}
+  @keyframes fblink{50%{opacity:.25}}
+  #hint{position:absolute;left:50%;top:44px;transform:translateX(-50%);z-index:5;pointer-events:none;
+    background:rgba(20,9,16,.82);border:1px solid #d8a838;border-radius:10px;padding:8px 16px;
+    font-size:12.5px;letter-spacing:1px;color:#ffd28a;text-align:center;line-height:1.7;
+    transition:opacity 1.2s;white-space:nowrap}
+  .petal{position:fixed;top:-30px;font-size:16px;opacity:.55;z-index:1;pointer-events:none;animation:fall linear infinite}
+  @keyframes fall{to{transform:translateY(110vh) rotate(300deg)}}
+  @media (prefers-reduced-motion:reduce){
+    .petal{display:none}
+    #mascot{animation:none}
+    #meyes,#mblink{animation:none}
+    #mascot .mpaw{animation:none}
+  }
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:none;background:#ffd28a;color:#3a1c14;padding:10px 24px;border-radius:30px;font-size:14px;letter-spacing:2px;z-index:9}
+  #card{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,4,8,.72);backdrop-filter:blur(6px);z-index:8;padding:20px}
+  #cardImg{display:block;width:100%;max-width:520px;border:1px solid rgba(200,160,96,.45);border-radius:6px;margin:12px 0 4px;background:#f6ead2}
+  #card.open{display:flex}
+  #panel{background:linear-gradient(180deg,#fff8ec,#ffeeda);color:#3a1c14;max-width:420px;width:100%;border-radius:14px;border:1px solid #d8a838;outline:3px solid #d8a838;outline-offset:5px;padding:34px 30px;text-align:center;animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes pop{from{transform:scale(.7);opacity:0}}
+  #panel .seal{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:#c8302e;color:#fff8ec;border-radius:10px;font-size:30px;margin-bottom:8px;transform:rotate(-3deg);box-shadow:0 3px 10px rgba(140,30,30,.35)}
+  #panel h2{font-size:12px;letter-spacing:5px;color:#a86428;margin-bottom:14px}
+  #bigscore{font-size:56px;color:#c8302e;font-weight:bold}
+  #panel p{font-size:14px;line-height:1.6;color:#7a4a20;margin:10px 0 18px}
+  .btn{font-family:inherit;font-size:13px;letter-spacing:3px;padding:11px 20px;border-radius:30px;cursor:pointer;border:2px solid #a86428;background:#fff;color:#a86428;margin:4px}
+  .btn.red{background:#c8302e;border-color:#8e1f1f;color:#ffe9c8}
+</style>
+</head>
+<body>
+<div id="brand">
+  <h1>KOBAN PUSHER</h1>
+  <p>THE LUCKY CAT ARCADE</p>
+  <span class="vert">招き猫・小判</span>
+</div>
+<div id="skinrow" style="margin-bottom:6px;z-index:2"></div>
+<div id="hud">
+  <span>KOBAN<b id="stock">25</b></span>
+  <span title="daily streak">STREAK<b id="streakN">1</b></span>
+  <span title="lifetime koban won">LIFE<b id="lifeN">0</b></span>
+  <span>WON<b id="score">0</b></span>
+  <span>BEST<b id="best">0</b></span>
+  <span id="feverBadge">FEVER x2</span>
+  <span id="combo" style="display:none;color:#7ac8ff">COMBO x<b id="comboN">0</b></span>
+  <span>NUDGE<b id="nudges">3</b></span>
+</div>
+<div id="wrap">
+  <div id="bark"></div>
+  <svg id="mascot" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <clipPath id="headclip"><path d="M52 78 C50 60 58 46 74 40 L64 14 C63 10 67 8 70 11 L88 34 C98 30 108 30 118 34 L136 11 C139 8 143 10 142 14 L132 40 C148 46 156 60 154 78 C152 100 132 116 103 116 C74 116 54 100 52 78 Z"/></clipPath>
+    </defs>
+    <!-- bobtail puff -->
+    <circle cx="170" cy="186" r="15" fill="#fff8ee" stroke="#e0d0bc" stroke-width="3"/>
+    <!-- seated body, pear-silhouette -->
+    <path d="M103 112 C70 114 52 136 48 164 C45 190 58 206 80 210 L126 210 C148 206 161 190 158 164 C154 136 136 114 103 112 Z" fill="#fff8ee" stroke="#e0d0bc" stroke-width="3" stroke-linejoin="round"/>
+    <!-- haunches -->
+    <path d="M66 206 C64 192 68 182 78 178 M140 206 C142 192 138 182 128 178" fill="none" stroke="#e0d0bc" stroke-width="3" stroke-linecap="round"/>
+    <!-- calico body patch -->
+    <path d="M140 150 C152 158 156 172 150 186 C140 184 132 172 134 158 Z" fill="#f0a840" opacity=".85"/>
+    <!-- bib -->
+    <path d="M70 128 Q103 146 136 128 L132 152 Q103 166 74 152 Z" fill="#c8302e"/>
+    <!-- collar -->
+    <path d="M66 118 Q103 138 140 118 L142 128 Q103 148 64 128 Z" fill="#8e1f1f"/>
+    <!-- bell -->
+    <circle cx="103" cy="140" r="8.5" fill="#ffd24a" stroke="#b8860b" stroke-width="2"/>
+    <line x1="96" y1="140" x2="110" y2="140" stroke="#b8860b" stroke-width="2"/>
+    <circle cx="103" cy="145.5" r="1.8" fill="#b8860b"/>
+    <!-- head: single silhouette, ears integrated -->
+    <path d="M52 78 C50 60 58 46 74 40 L64 14 C63 10 67 8 70 11 L88 34 C98 30 108 30 118 34 L136 11 C139 8 143 10 142 14 L132 40 C148 46 156 60 154 78 C152 100 132 116 103 116 C74 116 54 100 52 78 Z" fill="#fff8ee" stroke="#e0d0bc" stroke-width="3" stroke-linejoin="round"/>
+    <!-- calico head patches, clipped to the skull -->
+    <g clip-path="url(#headclip)">
+      <path d="M58 12 L92 32 C84 44 70 50 58 46 C52 34 52 22 58 12 Z" fill="#f0a840" opacity=".85"/>
+      <path d="M148 12 L118 34 C126 42 138 46 148 44 C154 32 154 20 148 12 Z" fill="#4a3a32" opacity=".9"/>
+    </g>
+    <!-- inner ears -->
+    <path d="M68 20 L74 34 L84 30 Z" fill="#f0a8b8"/>
+    <path d="M138 20 L132 34 L122 30 Z" fill="#f0a8b8"/>
+    <!-- closed happy eyes -->
+    <g id="meyes">
+      <path d="M76 82 Q84 74 92 82" fill="none" stroke="#3a2418" stroke-width="4" stroke-linecap="round"/>
+      <path d="M114 82 Q122 74 130 82" fill="none" stroke="#3a2418" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <g id="mblink" style="opacity:0">
+      <line x1="76" y1="82" x2="92" y2="82" stroke="#3a2418" stroke-width="4" stroke-linecap="round"/>
+      <line x1="114" y1="82" x2="130" y2="82" stroke="#3a2418" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <!-- blush -->
+    <ellipse cx="72" cy="96" rx="8" ry="5" fill="#f0a8b8" opacity=".65"/>
+    <ellipse cx="134" cy="96" rx="8" ry="5" fill="#f0a8b8" opacity=".65"/>
+    <!-- nose + mouth -->
+    <path d="M99 92 L107 92 L103 97 Z" fill="#d8607a"/>
+    <path d="M103 97 Q99 103 93 101 M103 97 Q107 103 113 101" fill="none" stroke="#3a2418" stroke-width="2.6" stroke-linecap="round"/>
+    <!-- whiskers -->
+    <g stroke="#dcc8b0" stroke-width="2" stroke-linecap="round" fill="none">
+      <path d="M66 90 L44 86 M66 98 L46 100"/>
+      <path d="M140 90 L162 86 M140 98 L160 100"/>
+    </g>
+    <!-- raised beckoning paw with beans (animated) -->
+    <g class="mpaw">
+      <path d="M58 128 C44 122 34 108 32 92 C31 80 36 70 44 68 C54 66 62 76 64 90 C66 104 66 118 62 128 Z" fill="#fff8ee" stroke="#e0d0bc" stroke-width="3" stroke-linejoin="round"/>
+      <ellipse cx="45" cy="100" rx="6" ry="8" fill="#f0a8b8"/>
+      <circle cx="38" cy="84" r="3.4" fill="#f0a8b8"/>
+      <circle cx="46" cy="80" r="3.4" fill="#f0a8b8"/>
+      <circle cx="54" cy="84" r="3.4" fill="#f0a8b8"/>
+    </g>
+    <!-- koban in the lap -->
+    <ellipse cx="103" cy="176" rx="26" ry="19" fill="#ffd24a" stroke="#b8860b" stroke-width="2.5"/>
+    <ellipse cx="103" cy="176" rx="19" ry="13" fill="none" stroke="#b8860b" stroke-width="1.4"/>
+    <text x="103" y="182" font-size="15" text-anchor="middle" fill="#8e1f1f" font-family="Georgia,serif">福</text>
+    <!-- resting paw over the coin -->
+    <path d="M132 168 C140 170 144 178 142 186 C134 188 126 184 124 176 C126 170 128 167 132 168 Z" fill="#fff8ee" stroke="#e0d0bc" stroke-width="2.5"/>
+  </svg>
+  <canvas id="c" width="480" height="700"></canvas>
+  <div id="hint">TAP anywhere to drop a koban at that spot<br>push the pile off the GOLD EDGE to win &bull; N nudges</div>
+</div>
+<button id="shareBtn">SHARE MY SCORE</button>
+<button id="nudgeBtn" style="margin-left:10px;padding:11px 26px;font-family:inherit;font-size:13px;letter-spacing:3px;border-radius:30px;cursor:pointer;background:#3a2410;color:#ffd28a;border:2px solid #8a5a2a">NUDGE (N)</button>
+<svg width="220" height="10" viewBox="0 0 220 10" style="margin-top:12px;opacity:.7"><path d="M4 5 Q 60 1, 110 5 T 216 5" stroke="#c8a060" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+<div id="foot">TAP TO DROP &bull; N = NUDGE &bull; SILVER PAYS 3 &bull; RED 福 PAYS 5 &bull; <span id='dailyluck'></span><br>A MANEKI-NEKO THAT ANSWERS BACK &bull; NOT ANOTHER BLACK CYLINDER</div>
+<div id="toast">LINK COPIED - CHALLENGE SOMEONE</div>
+<div id="card">
+  <div id="panel">
+    <div class="seal">福</div>
+    <h2>KOBAN PUSHER</h2>
+    <img id="cardImg" alt="your score card">
+    <p id="scoreline">The cat pays out. The cat always pays out.</p>
+    <button class="btn red" id="shareCard">SHARE THE CARD</button>
+    <button class="btn" id="copyScore">COPY CHALLENGE TEXT</button>
+    <button class="btn" id="closeCard">BACK TO THE MACHINE</button>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+<script>
+'use strict';
+const params=new URLSearchParams(location.search);
+const SHOT=params.has('shot'),SHOTCARD=params.has('shotcard');
+if(typeof Matter==='undefined'){
+  document.body.innerHTML='<p style="color:#ffd28a;font-family:Georgia;text-align:center;margin-top:40vh">The machine could not wake its physics.<br>Check your connection and refresh.</p>';
+  throw new Error('Matter.js failed to load');
+}
+const {Engine,Events,Bodies,Body,Composite}=Matter;
+const W=480,H=700;
+const SHELF_TOP=440,SHELF_RIGHT=340,TRAY_Y=648;
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+
+const engine=Engine.create({enableSleeping:false});
+engine.positionIterations=8;engine.velocityIterations=6;
+const world=engine.world;
+
+// statics: shelf, left wall, outer right wall, tray floor
+Composite.add(world,[
+ Bodies.rectangle(165,SHELF_TOP+30,350,60,{isStatic:true}),                           // shelf (spans -10..340, flush with drawn edge)
+ Bodies.rectangle(8,240,16,480,{isStatic:true}),                                        // left wall
+ Bodies.rectangle(472,400,16,620,{isStatic:true}),                                      // right outer wall
+ Bodies.rectangle(240,720,520,60,{isStatic:true}),                                      // tray floor (safety)
+]);
+
+// pusher plate (driven)
+const pusher=Bodies.rectangle(90,SHELF_TOP-70,34,140,{density:.5,friction:.2,frictionStatic:1,restitution:0});
+Body.setInertia(pusher,Infinity);
+Composite.add(world,pusher);
+
+// coins
+const coins=[];
+let drops=0;
+function nextDropType(){
+  const red=DAILY.id==='red6'?(drops%6===5):(drops%8===7), silver=(!red&&drops%5===4), moon=(drops%23===22);
+  return {red,silver,moon,r:silver?17:moon?12:14};
+}
+function dropCoin(x){
+  const{red,silver,moon,r}=nextDropType();
+  const c=Bodies.circle(Math.max(56,Math.min(SHELF_RIGHT-24,x)),36,r,{
+    density:.012,friction:.08,frictionStatic:.3,restitution:.15,label:'coin'
+  });
+  c.plugin={red,silver,moon,r,born:performance.now()};
+  Composite.add(world,c);coins.push(c);drops++;
+}
+function removeCoin(c){
+  Composite.remove(world,c);
+  const i=coins.indexOf(c);if(i>=0)coins.splice(i,1);
+}
+
+// state
+let score=0,lastDrop=0;
+let stock=25;
+let best=0,life=0,streak=1,skin=0;
+try{
+  best=parseInt(localStorage.getItem('kobanBest')||'0',10)||0;
+  life=parseInt(localStorage.getItem('kobanLife')||'0',10)||0;
+  skin=parseInt(localStorage.getItem('kobanSkin')||'0',10)||0;
+  const today=new Date().toDateString(),last=localStorage.getItem('kobanLast');
+  if(last===today){streak=parseInt(localStorage.getItem('kobanStreak')||'1',10)||1;}
+  else{
+    const y=new Date(Date.now()-864e5).toDateString();
+    streak=(last===y)?(parseInt(localStorage.getItem('kobanStreak')||'0',10)||0)+1:1;
+    localStorage.setItem('kobanStreak',String(streak));localStorage.setItem('kobanLast',today);
+  }
+}catch(e){}
+stock=25+Math.min(streak,10);
+function saveBest(){try{localStorage.setItem('kobanBest',String(best));localStorage.setItem('kobanLife',String(life));}catch(e){}}
+const SKINS=[
+ {name:'PARLOR',g0:'#5a2438',g1:'#3a1626',g2:'#200d18',shelf:'#8e1f1f',shelfTop:'#c8302e',trim:'#ffd24a',need:0},
+ {name:'GOLDEN',g0:'#4a2c10',g1:'#2e1c08',g2:'#1c1004',shelf:'#a8720a',shelfTop:'#d8a028',trim:'#fff2a8',need:100},
+ {name:'SAKURA',g0:'#5a2438',g1:'#40202e',g2:'#241018',shelf:'#c85a7a',shelfTop:'#f0a8b8',trim:'#ffd0dc',need:300},
+ {name:'MIDNIGHT',g0:'#1c2440',g1:'#10162c',g2:'#080c1c',shelf:'#2a3a7a',shelfTop:'#4a5ac8',trim:'#8ab0ff',need:750},
+];
+function unlockedSkins(){return SKINS.filter(s=>life>=s.need);}
+let winTimes=[],feverT=0,feverBeat=0,shakeT=0,lastInteract=performance.now(),attract=false,attractDrop=0,nudges=3,nudgeRefill=0,aimX=180,aimVisible=false,holding=false,lastPusherDir=0,combo=0,lastWinT=0,floaters=[],humOn=false,eggCd=0,eggFlash=0;
+const EGG_X=305,EGG_Y=440-14;
+// daily luck modifier - the machine is luckier some days (deterministic)
+const DAILY=(()=>{
+  const d=new Date(),k=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+  const mods=[
+    {id:'silver2',tx:'SILVER PAYS DOUBLE TODAY'},
+    {id:'fever4',tx:'FEVER LIGHTS ON 4 WINS TODAY'},
+    {id:'red6',tx:'RED KOBAN COME MORE OFTEN TODAY'},
+  ];
+  return mods[k%mods.length];
+})();
+document.getElementById('dailyluck').textContent=DAILY.tx;
+const BARKS_WIN=['The cat approves.','Luck compounds.','The tray runneth over.','Again. AGAIN.'];
+const BARKS_JACKPOT=['JACKPOT. The cat howls.','RED KOBAN. The house trembles.','Five-fold. The cat bows to you.'];
+const BARKS_FEVER=['FEVER. The paw cannot stop.','THE CAT IS AWAKE NOW.'];
+function bark(t){
+  const b=document.getElementById('bark');
+  b.textContent=t;b.style.display='block';
+  clearTimeout(bark._t);bark._t=setTimeout(()=>b.style.display='none',2400);
+}
+const stockEl=document.getElementById('stock'),scoreEl=document.getElementById('score'),bestEl=document.getElementById('best');
+bestEl.textContent=best;
+document.getElementById('streakN').textContent=streak;
+document.getElementById('lifeN').textContent=life;
+function hud(){stockEl.textContent=stock;scoreEl.textContent=score;bestEl.textContent=best;document.getElementById('lifeN').textContent=life;checkUnlocks();}
+
+// audio
+let actx=null;
+function tone(f,d,type,g,when){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const t0=actx.currentTime+(when||0);
+    const o=actx.createOscillator(),v=actx.createGain();
+    o.type=type;o.frequency.value=f;
+    v.gain.setValueAtTime(0,t0);v.gain.linearRampToValueAtTime(g,t0+.012);v.gain.exponentialRampToValueAtTime(.001,t0+d);
+    o.connect(v).connect(actx.destination);o.start(t0);o.stop(t0+d+.05);
+  }catch(e){}
+}
+let lastTick=0;
+Events.on(engine,'collisionStart',ev=>{
+  const t=performance.now();if(t-lastTick<70)return;
+  for(const p of ev.pairs){
+    const b=p.bodyA.label==='coin'?p.bodyA:p.bodyB.label==='coin'?p.bodyB:null;
+    if(b&&Math.abs(b.velocity.y)>3){lastTick=t;tone(1800+Math.random()*900,.05,'triangle',.04);break;}
+  }
+});
+function startHum(){
+  if(humOn||!actx)return;humOn=true;
+  const o=actx.createOscillator(),g=actx.createGain(),l=actx.createOscillator(),lg=actx.createGain();
+  o.type='sine';o.frequency.value=58;g.gain.value=.014;
+  l.type='sine';l.frequency.value=.4;lg.gain.value=.006;
+  l.connect(lg);lg.connect(g.gain);o.connect(g).connect(actx.destination);
+  o.start();l.start();
+}
+const ting=()=>{tone(2400,.18,'triangle',.12);tone(3200,.14,'triangle',.06,.02);};
+const jackpotSound=()=>{[1046,1318,1568,2093,2637].forEach((f,i)=>tone(f,.5,'sine',.12,i*.09));};
+const thud=()=>tone(140,.12,'sine',.1);
+
+// confetti
+function confetti(){
+  for(let i=0;i<46;i++){
+    const s=document.createElement('div');
+    s.textContent=['✦','❋','●','◆'][i%4];
+    s.style.cssText='position:fixed;z-index:9;pointer-events:none;font-size:'+(8+Math.random()*14)+'px;left:'+(40+Math.random()*80)+'vw;top:40vh;color:'+['#ffd24a','#c8302e','#f0a8b8','#fff8ec'][i%4];
+    document.body.appendChild(s);
+    const a=Math.random()*6.28,d=80+Math.random()*220;
+    s.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:'translate('+Math.cos(a)*d+'px,'+(Math.sin(a)*d+160)+'px) rotate(540deg)',opacity:0}],{duration:900+Math.random()*800,easing:'cubic-bezier(.2,.8,.4,1)'}).onfinish=()=>s.remove();
+  }
+}
+
+// input
+function pointerX(e){
+  const r=canvas.getBoundingClientRect();
+  const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+  return cx*(W/r.width);
+}
+let pressing=false;
+function tryDrop(e){
+  pressing=true;
+  if(document.getElementById('card').classList.contains('open'))return;
+  const now=performance.now();
+  if(now-lastDrop<320)return;
+  if(stock<=0){stock=25;hud();toast('THE CAT REFILLS YOUR TRAY - 25 KOBAN');}
+  lastDrop=now;stock--;hud();thud();
+  const hn=document.getElementById('hint');if(hn){hn.style.opacity=0;setTimeout(()=>hn.remove(),1400);}
+  dropCoin(pointerX(e));
+}
+canvas.addEventListener('pointerdown',e=>{lastInteract=performance.now();attract=false;startHum();aimX=Math.max(56,Math.min(SHELF_RIGHT-24,pointerX(e)));aimVisible=true;tryDrop(e);holding=true;});
+canvas.addEventListener('pointermove',e=>{aimX=Math.max(56,Math.min(SHELF_RIGHT-24,pointerX(e)));aimVisible=true;});
+canvas.addEventListener('pointerleave',()=>{aimVisible=false;holding=false;});
+addEventListener('pointerup',()=>holding=false);
+addEventListener('keydown',e=>{
+  if(e.code==='ArrowLeft'){aimX=Math.max(56,aimX-14);aimVisible=true;}
+  if(e.code==='ArrowRight'){aimX=Math.min(SHELF_RIGHT-24,aimX+14);aimVisible=true;}
+  if(e.code==='Space'||e.code==='Enter'){e.preventDefault();aimVisible=true;tryDrop({clientX:canvas.getBoundingClientRect().left+aimX*(canvas.getBoundingClientRect().width/W)});}
+});
+addEventListener('keydown',e=>{if(e.code==='KeyN')nudge();});
+addEventListener('keydown',()=>{lastInteract=performance.now();attract=false;});
+let cardBlob=null,cardUrl=null;
+function challengeText(){return 'I won '+score+' koban in KOBAN PUSHER - the Lucky Cat arcade. Beat that: '+location.origin+location.pathname;}
+function renderShareCard(){return new Promise(resolve=>{
+  const cv=document.createElement('canvas');cv.width=1200;cv.height=630;const g=cv.getContext('2d');
+  // cream paper ground + quiet brush tone
+  g.fillStyle='#f6ead2';g.fillRect(0,0,1200,630);
+  g.strokeStyle='rgba(120,80,40,.06)';g.lineWidth=14;
+  for(let i=0;i<7;i++){g.beginPath();g.moveTo(-40,80+i*88);g.bezierCurveTo(300,60+i*88,900,110+i*88,1240,70+i*88);g.stroke();}
+  // gold frame
+  g.strokeStyle='#b8860b';g.lineWidth=3;g.strokeRect(26,26,1148,578);
+  g.strokeStyle='rgba(184,134,11,.5)';g.lineWidth=1;g.strokeRect(36,36,1128,558);
+  // wordmark
+  g.fillStyle='#8e1f1f';g.font='700 24px Georgia,serif';g.textAlign='left';
+  g.fillText('K O B A N   P U S H E R',64,92);
+  g.fillStyle='#b8860b';g.fillRect(64,104,64,2);
+  // huge ink score
+  g.fillStyle='#2a1a12';g.font='700 190px Georgia,serif';
+  g.fillText(String(score),60,320);
+  g.fillStyle='#c8302e';g.font='700 26px Georgia,serif';
+  g.fillText('KOBAN WON AT THE LUCKY CAT ARCADE',64,368);
+  // stat rows
+  g.fillStyle='#5a4632';g.font='22px Georgia,serif';
+  g.fillText('BEST  '+String(best),64,430);
+  g.fillText('LIFETIME  '+String(life),64,470);
+  g.fillText('DAY STREAK  '+String(streak),64,510);
+  // footer
+  g.fillStyle='#8e1f1f';g.font='20px Georgia,serif';
+  g.fillText('same machine, all day, everywhere - beat me',130,566);
+  g.fillStyle='#5a4632';g.font='18px Georgia,serif';
+  g.fillText(location.origin+location.pathname,130,592);
+  // tategaki down the right edge
+  g.fillStyle='#2a1a12';g.font='30px Georgia,serif';g.textAlign='center';
+  const tt='招き猫';for(let i=0;i<tt.length;i++)g.fillText(tt[i],1136,110+i*44);
+  // ink disc + gold ring for the mark
+  g.fillStyle='#2a1a12';g.beginPath();g.arc(890,300,158,0,6.29);g.fill();
+  g.strokeStyle='#ffd24a';g.lineWidth=4;g.beginPath();g.arc(890,300,158,0,6.29);g.stroke();
+  g.strokeStyle='rgba(255,210,74,.4)';g.lineWidth=1.5;g.beginPath();g.arc(890,300,170,0,6.29);g.stroke();
+  g.strokeStyle='#ffd24a';g.lineWidth=3;g.beginPath();g.moveTo(732,462);g.lineTo(1048,462);g.stroke();
+  function finish(){
+    // hanko, half off the corner
+    g.save();g.translate(60,584);g.rotate(-.12);
+    g.fillStyle='#c8302e';g.beginPath();g.roundRect(-42,-42,84,84,10);g.fill();
+    g.fillStyle='#f6ead2';g.font='700 44px Georgia,serif';g.textAlign='center';g.fillText('吉',0,16);g.restore();
+    cv.toBlob(b=>{
+      cardBlob=b;
+      if(cardUrl)URL.revokeObjectURL(cardUrl);
+      cardUrl=URL.createObjectURL(b);
+      document.getElementById('cardImg').src=cardUrl;
+      resolve();
+    },'image/png');
+  }
+  // the mark itself, from the live SVG
+  try{
+    const svg=document.getElementById('mascot').cloneNode(true);
+    svg.setAttribute('width','300');svg.setAttribute('height','330');
+    const img=new Image();
+    img.onload=()=>{g.drawImage(img,890-150,300-178,300,330);finish();};
+    img.onerror=()=>{g.fillStyle='#fff8ec';g.font='700 120px Georgia,serif';g.textAlign='center';g.fillText('福',890,340);finish();};
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+  }catch(e){g.fillStyle='#fff8ec';g.font='700 120px Georgia,serif';g.textAlign='center';g.fillText('福',890,340);finish();}
+});}
+document.getElementById('shareBtn').onclick=()=>{
+  document.getElementById('card').classList.add('open');
+  renderShareCard();
+};
+document.getElementById('shareCard').onclick=()=>{
+  const text=challengeText();
+  if(cardBlob&&navigator.canShare){
+    const file=new File([cardBlob],'koban-pusher-score.png',{type:'image/png'});
+    if(navigator.canShare({files:[file]})){navigator.share({files:[file],text:text}).catch(()=>{});return;}
+  }
+  if(cardUrl){const a=document.createElement('a');a.href=cardUrl;a.download='koban-pusher-score.png';a.click();}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>toast('CARD SAVED - CHALLENGE COPIED'));
+};
+document.getElementById('nudgeBtn').onclick=nudge;
+if(SHOTCARD){score=321;best=480;life=1234;streak=5;setTimeout(()=>document.getElementById('shareBtn').click(),400);}
+document.getElementById('closeCard').onclick=()=>document.getElementById('card').classList.remove('open');
+document.getElementById('copyScore').onclick=()=>{
+  const text=challengeText();
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>toast('CHALLENGE COPIED - SEND IT'));
+  else prompt('Copy your challenge:',text);
+};
+function nudge(){
+  if(nudges<=0){bark('The cat shakes its head. No nudges.');return;}
+  nudges--;document.getElementById('nudges').textContent=nudges;
+  for(const c of coins){
+    if(c.position.y<SHELF_TOP&&c.position.x<SHELF_RIGHT+20){
+      Body.setVelocity(c,{x:c.velocity.x+7+Math.random()*3,y:c.velocity.y-2-Math.random()*2});
+    }
+  }
+  shakeT=Math.max(shakeT,.25);thud();
+  bark(['The cat SHOVES.','Koban, move.','The machine tilts. Legally.'][(Math.random()*3)|0]);
+}
+const announced={};
+function checkUnlocks(){
+  SKINS.forEach((s,i)=>{
+    if(life>=s.need&&!announced[i]){
+      announced[i]=true;
+      if(i>0){toast('UNLOCKED: THE '+s.name+' CABINET');confetti();}
+    }
+  });
+  renderSkinButtons();
+}
+function renderSkinButtons(){
+  const el=document.getElementById('skinrow');el.innerHTML='';
+  SKINS.forEach((s,i)=>{
+    const b=document.createElement('button');
+    const ok=life>=s.need;
+    b.textContent=ok?s.name:s.need+' 福';
+    b.style.cssText='font-family:inherit;font-size:10px;letter-spacing:2px;padding:5px 12px;border-radius:20px;margin:0 3px;cursor:'+(ok?'pointer':'default')+';border:1.5px solid '+(i===skin?'#ffd28a':'#6a4a30')+';background:'+(ok?(i===skin?'#c8302e':'#3a2410'):'#241a12')+';color:'+(ok?'#ffe9c8':'#7a6040');
+    if(ok)b.onclick=()=>{skin=i;try{localStorage.setItem('kobanSkin',String(i));}catch(e){}renderSkinButtons();};
+    el.appendChild(b);
+  });
+}
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>el.style.display='none',2200);}
+
+// pusher drive + collect loop
+let t0=performance.now();
+function step(now){
+  const dt=Math.min((now-t0)/1000,.05);t0=now;
+  // pusher: sine between x=56 and x=196, period 2.6s
+  const target=126+70*Math.sin(now/1000*2*Math.PI/(feverT>0?2.15:2.6));
+  const pv=Math.max(-4.5,Math.min(4.5,(target-pusher.position.x)*.35)); // px/tick - natural peak ~2.8
+  Body.setVelocity(pusher,{x:pv,y:0});
+  if(pusher.position.y>SHELF_TOP-68)Body.setPosition(pusher,{x:pusher.position.x,y:SHELF_TOP-70});
+  Engine.update(engine,dt*1000);
+  if(feverT>0){
+    feverT-=dt;
+    feverBeat-=dt;
+    if(feverBeat<=0){feverBeat=.5;if(actx)tone(55,.3,'sine',.055);tone(110,.2,'triangle',.02);}
+    if(feverT<=0){document.body.classList.remove('fever');document.getElementById('feverBadge').style.display='none';bark('The fever passes. The cat naps.');}
+  }
+  if(shakeT>0)shakeT-=dt;
+  if(combo>0&&performance.now()-lastWinT>4000){combo=0;document.getElementById('combo').style.display='none';}
+  for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.t-=dt*1.4;f.y-=dt*44;if(f.t<=0)floaters.splice(i,1);}
+  // THE SHELF CAT: an offering placed gently beside it earns its blessing
+  if(eggCd>0)eggCd-=dt;
+  if(eggFlash>0)eggFlash-=dt;
+  if(eggCd<=0){
+    for(const c of coins){
+      const spd=Math.hypot(c.velocity.x,c.velocity.y);
+      if(Math.abs(c.position.x-EGG_X)<30&&Math.abs(c.position.y-EGG_Y)<26&&spd<2.5){
+        eggCd=45;eggFlash=.8;
+        const n=feverT>0?5:3;
+        for(let k=0;k<n;k++)setTimeout(()=>{const cc=Bodies.circle(EGG_X-30+Math.random()*50,120,14,{density:.012,friction:.08,frictionStatic:.3,restitution:.15,label:'coin'});cc.plugin={red:false,silver:false,moon:false,r:14,born:performance.now()};Composite.add(world,cc);coins.push(cc);},k*140);
+        jackpotSound();confetti();
+        bark('The shelf cat accepts your offering. It pays back in gold.');
+        floaters.push({x:EGG_X,y:EGG_Y-30,txt:'BLESSED',t:1.2,color:'#ffd24a'});
+        break;
+      }
+    }
+  }
+  // attract mode: after 20 idle seconds the cabinet plays itself
+  if(!attract&&now-lastInteract>20000){attract=true;}
+  if(attract){
+    attractDrop-=dt;
+    if(attractDrop<=0&&coins.length<70){
+      attractDrop=.75;
+      dropCoin(80+Math.random()*(SHELF_RIGHT-140));
+      floaters.push({x:W/2,y:80,txt:'TOUCH TO PLAY',t:.8,color:'#d8a878'});
+    }
+  }
+  if(holding&&now-lastDrop>350)tryDrop({clientX:canvas.getBoundingClientRect().left+aimX*(canvas.getBoundingClientRect().width/W)});
+  // pusher clunk at stroke extremes
+  const pdir=Math.cos(now/1000*2*Math.PI/2.6)>0?1:-1;
+  if(pdir!==lastPusherDir){lastPusherDir=pdir;if(actx)tone(90,.1,'sine',.07);}
+  if(nudges<3){
+    nudgeRefill+=dt;
+    if(nudgeRefill>=30){nudgeRefill=0;nudges++;document.getElementById('nudges').textContent=nudges;}
+  }
+  // collect / cull
+  for(let i=coins.length-1;i>=0;i--){
+    const c=coins[i];
+    if(c.position.y>TRAY_Y&&c.position.x>SHELF_RIGHT-10){
+      const red=c.plugin.red;
+      removeCoin(c);
+      if(attract){continue;} // attract mode never banks score
+      const now2=performance.now();
+      winTimes.push(now2);winTimes=winTimes.filter(t=>now2-t<8000);
+      if(feverT<=0&&winTimes.length>=(DAILY.id==='fever4'?4:5)){
+        feverT=15;document.body.classList.add('fever');
+        document.getElementById('feverBadge').style.display='inline';
+        bark(BARKS_FEVER[(Math.random()*BARKS_FEVER.length)|0]);
+        jackpotSound();
+      }
+      const mult=feverT>0?2:1;
+      const base=c.plugin.moon?10:red?5:c.plugin.silver?3*(DAILY.id==='silver2'?2:1):1;
+      stock++;score+=base*mult;life+=base*mult;saveBest();
+      combo=(now2-lastWinT<4000)?combo+1:1;lastWinT=now2;
+      if(combo>=3)document.getElementById('combo').style.display='inline';
+      document.getElementById('comboN').textContent=combo;
+      if(combo===5||combo===10)bark('COMBO x'+combo+' - the cat is taking notes.');
+      if(score>best){best=score;saveBest();}
+      floaters.push({x:c.position.x,y:TRAY_Y-8,txt:'+'+(base*mult),t:1,color:c.plugin.moon?'#bcd8ff':red?'#ff8a8a':c.plugin.silver?'#e8ecf4':'#ffd24a'});
+      hud();
+      if(c.plugin.moon){jackpotSound();confetti();shakeT=.5;bark('THE MOON KOBAN. The cat saw the moon in you.');}
+      else if(red){jackpotSound();confetti();shakeT=.45;nudges=Math.min(3,nudges+1);document.getElementById('nudges').textContent=nudges;bark(BARKS_JACKPOT[(Math.random()*BARKS_JACKPOT.length)|0]);}
+      else{ting();if(Math.random()<.25)bark(BARKS_WIN[(Math.random()*BARKS_WIN.length)|0]);}
+    }else if(c.position.y>H+80||c.position.x>W+80){
+      removeCoin(c);
+    }
+  }
+  draw(now);
+  requestAnimationFrame(step);
+}
+
+// ---------- render ----------
+function draw(now){
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  if(shakeT>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches)ctx.translate((Math.random()-.5)*7,(Math.random()-.5)*7);
+  // cabinet back
+  const PAL=SKINS[skin];
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,PAL.g0);g.addColorStop(.55,PAL.g1);g.addColorStop(1,PAL.g2);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // seigaiha band (青海波) - overlapping wave arcs under the marquee
+  ctx.strokeStyle='rgba(216,168,56,.28)';ctx.lineWidth=1.2;
+  for(let row=0;row<2;row++){
+    for(let i=0;i<16;i++){
+      const bx=i*32+(row?16:0),by=44+row*14;
+      ctx.beginPath();ctx.arc(bx,by,16,Math.PI,0);ctx.stroke();
+      ctx.beginPath();ctx.arc(bx,by,10,Math.PI,0);ctx.stroke();
+      ctx.beginPath();ctx.arc(bx,by,4,Math.PI,0);ctx.stroke();
+    }
+  }
+  // marquee bulbs
+  for(let i=0;i<12;i++){
+    const on=feverT>0?((Math.floor(now/160)+i)%2===0):true;
+    ctx.fillStyle=on?'#ffd24a':'#6a4a20';
+    ctx.beginPath();ctx.arc(60+i*32.7,8,3.4,0,6.29);ctx.fill();
+  }
+  // back marquee (hidden during fever - fever marquee draws later)
+  if(feverT<=0){
+    ctx.fillStyle='#ffd28a';ctx.font='700 22px Georgia';ctx.textAlign='center';
+    ctx.fillText('福 KOBAN PUSHER 福',W/2,26);
+  }
+  // collection tray
+  ctx.fillStyle='#160810';ctx.fillRect(SHELF_RIGHT+8,TRAY_Y+6,W-SHELF_RIGHT-24,H-TRAY_Y-16);
+  ctx.strokeStyle='#d8a838';ctx.lineWidth=2;ctx.strokeRect(SHELF_RIGHT+8,TRAY_Y+6,W-SHELF_RIGHT-24,H-TRAY_Y-16);
+  ctx.fillStyle='#a86428';ctx.font='13px Georgia';
+  ctx.save();ctx.translate(SHELF_RIGHT+44,TRAY_Y+26);
+  '勝利'.split('').forEach((ch,i)=>ctx.fillText(ch,0,i*16));
+  ctx.restore();
+  // shelf
+  ctx.fillStyle=PAL.shelf;ctx.fillRect(0,SHELF_TOP,SHELF_RIGHT,H-SHELF_TOP);
+  ctx.fillStyle=PAL.shelfTop;ctx.fillRect(0,SHELF_TOP,SHELF_RIGHT,10);
+  ctx.fillStyle=PAL.trim;ctx.fillRect(SHELF_RIGHT-4,SHELF_TOP-6,8,10); // the golden edge
+  // left wall
+  ctx.fillStyle='#6a1420';ctx.fillRect(0,0,16,SHELF_TOP);
+  // coins
+  for(const c of coins){
+    const{x,y}=c.position;
+    ctx.save();ctx.translate(x,y);ctx.rotate(c.angle);
+    // teetering on the lip: pulse gold
+    if(x>SHELF_RIGHT-44&&y<SHELF_TOP-2){
+      ctx.strokeStyle='rgba(255,210,74,'+(0.35+0.35*Math.sin(now/90))+')';
+      ctx.lineWidth=3.5;
+      ctx.beginPath();ctx.arc(0,0,(c.plugin.r||14)+4,0,6.29);ctx.stroke();
+    }
+    if(c.plugin.moon){
+      ctx.fillStyle='#3a6ad8';ctx.strokeStyle='#1a3a8a';
+    }else if(c.plugin.red){
+      ctx.fillStyle='#c8302e';ctx.strokeStyle='#8e1f1f';
+    }else if(c.plugin.silver){
+      ctx.fillStyle='#e8ecf4';ctx.strokeStyle='#8a92a8';
+    }else{
+      ctx.fillStyle='#ffd24a';ctx.strokeStyle='#b8860b';
+    }
+    const cr=c.plugin.r||14;
+    ctx.beginPath();ctx.arc(0,0,cr,0,6.29);ctx.fill();ctx.lineWidth=2.5;ctx.stroke();
+    ctx.beginPath();ctx.arc(0,0,cr-5,0,6.29);ctx.lineWidth=1.4;ctx.stroke();
+    ctx.fillStyle=c.plugin.moon?'#bcd8ff':c.plugin.red?'#ffd24a':c.plugin.silver?'#4a5568':'#8e1f1f';
+    ctx.font='700 '+(c.plugin.silver?13:11)+'px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';
+    if(c.plugin.moon){
+      ctx.beginPath();ctx.arc(1,0,7,0,6.29);ctx.fill();
+      ctx.fillStyle='#3a6ad8';
+      ctx.beginPath();ctx.arc(4,-2,6,0,6.29);ctx.fill();
+    }else{
+      ctx.fillText('福',0,1);
+    }
+    ctx.restore();
+  }
+  // pusher (red lacquer plate, gold trim)
+  const px=pusher.position.x,py=pusher.position.y;
+  ctx.fillStyle='#c8302e';ctx.fillRect(px-17,py-70,34,140);
+  ctx.strokeStyle='#ffd24a';ctx.lineWidth=3;ctx.strokeRect(px-17,py-70,34,140);
+  ctx.fillStyle='#ffd24a';ctx.font='16px Georgia';ctx.textAlign='center';
+  ctx.fillText('福',px,py-46);
+  // the shelf cat figurine (easter egg - leave it a gentle offering)
+  ctx.save();ctx.translate(EGG_X,440);
+  // pear body, single confident silhouette
+  ctx.fillStyle='#fff8ec';
+  ctx.beginPath();ctx.moveTo(-8,-2);
+  ctx.quadraticCurveTo(-10,-12,-4,-13.5);ctx.quadraticCurveTo(0,-15,4,-13.5);
+  ctx.quadraticCurveTo(10,-12,8,-2);ctx.quadraticCurveTo(7,1,0,1);ctx.quadraticCurveTo(-7,1,-8,-2);
+  ctx.closePath();ctx.fill();
+  // head with integrated ears
+  ctx.beginPath();ctx.moveTo(-6,-13.5);ctx.lineTo(-6,-19.5);ctx.lineTo(-2.5,-16);
+  ctx.quadraticCurveTo(0,-17.5,2.5,-16);ctx.lineTo(6,-19.5);ctx.lineTo(6,-13.5);
+  ctx.quadraticCurveTo(6,-9.5,0,-9.5);ctx.quadraticCurveTo(-6,-9.5,-6,-13.5);
+  ctx.closePath();ctx.fill();
+  // red collar + gold bell
+  ctx.fillStyle='#c8302e';ctx.fillRect(-4.5,-10,9,2);
+  ctx.fillStyle='#ffd24a';ctx.beginPath();ctx.arc(0,-6.8,1.6,0,6.29);ctx.fill();
+  // raised gold paw (flashes when blessing)
+  ctx.fillStyle=eggFlash>0?'#fff2a8':'#ffd24a';
+  ctx.beginPath();ctx.ellipse(7.5,-13,2.6,5,-.25,0,6.29);ctx.fill();
+  // closed happy eyes
+  ctx.strokeStyle='#3a1c14';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.arc(-2.2,-14,1.1,Math.PI*.15,Math.PI*.85);ctx.stroke();
+  ctx.beginPath();ctx.arc(2.2,-14,1.1,Math.PI*.15,Math.PI*.85);ctx.stroke();
+  // 福 on the belly
+  ctx.fillStyle='#c8302e';
+  ctx.font='7px Georgia';ctx.textAlign='center';ctx.fillText('福',0,-2);
+  // readiness LED
+  ctx.fillStyle=eggCd<=0?'#ffd24a':'#5a4a30';
+  ctx.beginPath();ctx.arc(0,-34,2.2,0,6.29);ctx.fill();
+  ctx.restore();
+  // drop preview ghost
+  if(aimVisible&&!document.getElementById('card').classList.contains('open')){
+    ctx.save();ctx.globalAlpha=.45;
+    const nd=nextDropType();
+    ctx.strokeStyle=nd.moon?'#7ab0ff':nd.red?'#ff8a8a':nd.silver?'#e8ecf4':'#fff8ec';
+    ctx.setLineDash([4,4]);ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(aimX,36,nd.r,0,6.29);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#fff8ec';ctx.font='700 10px Georgia';ctx.textAlign='center';
+    ctx.fillText('福',aimX,40);
+    ctx.restore();
+  }
+  // floating win text
+  for(const f of floaters){
+    ctx.globalAlpha=Math.min(1,f.t);
+    ctx.fillStyle=f.color;ctx.font='700 19px Georgia';ctx.textAlign='center';
+    ctx.fillText(f.txt,f.x,f.y);
+    ctx.globalAlpha=1;
+  }
+  // glass sheen
+  const gg=ctx.createLinearGradient(0,0,W,0);
+  gg.addColorStop(0,'rgba(255,255,255,.07)');gg.addColorStop(.25,'rgba(255,255,255,0)');gg.addColorStop(.8,'rgba(255,255,255,0)');gg.addColorStop(1,'rgba(255,255,255,.05)');
+  ctx.fillStyle=gg;ctx.fillRect(0,0,W,H);
+  // fever glow on the marquee
+  if(feverT>0){
+    ctx.fillStyle=Math.floor(now/200)%2?'#ff5a4a':'#ffd24a';
+    ctx.font='700 22px Georgia';ctx.textAlign='center';
+    ctx.fillText('福 FEVER - DOUBLE PAYOUTS 福',W/2,26);
+  }
+  ctx.restore();
+}
+
+// seasonal motifs - the cabinet follows the real season
+(function(){
+  const m=new Date().getMonth(); // 0-11
+  const season=m>=2&&m<=4?{glyph:'❀',colors:['#f0a8b8','#ffd0dc','#fff0f4'],drift:0}        // sakura
+    :m>=5&&m<=7?{glyph:'✦',colors:['#d8e86a','#fff2a8','#b8d84a'],drift:1}                  // fireflies (rise)
+    :m>=8&&m<=10?{glyph:'❧',colors:['#d86a3a','#c8302e','#e8a04a'],drift:0}                 // momiji
+    :{glyph:'❄',colors:['#dce8f4','#ffffff','#b8d0e8'],drift:0};                            // snow
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced)return;
+  for(let i=0;i<10;i++){
+    const p=document.createElement('div');p.className='petal';p.textContent=season.glyph;
+    p.style.left=(Math.random()*100)+'vw';
+    p.style.animationDuration=(8+Math.random()*9)+'s';
+    p.style.animationDelay=(-Math.random()*16)+'s';
+    p.style.fontSize=(11+Math.random()*11)+'px';
+    p.style.color=season.colors[i%season.colors.length];
+    if(season.drift)p.style.animationDirection='reverse'; // fireflies rise
+    document.body.appendChild(p);
+  }
+})();
+setTimeout(()=>{const hn=document.getElementById('hint');if(hn){hn.style.opacity=0;setTimeout(()=>hn.remove(),1400);}},12000);
+if(SHOT){for(let i=0;i<10;i++)dropCoin(120+i*22);}
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
