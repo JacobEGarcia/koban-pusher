@@ -218,6 +218,15 @@ function removeCoin(c){
   const i=coins.indexOf(c);if(i>=0)coins.splice(i,1);
 }
 
+// seed the shelf: a pusher that opens empty looks broken, not ready
+for(let i=0;i<14;i++){
+  const row=i<9?0:1, sx=118+(i%9)*24+(row?12:0), sy=SHELF_TOP-16-row*22;
+  if(sx>SHELF_RIGHT-22)continue;
+  const sc=Bodies.circle(sx,sy,14,{density:.012,friction:.08,frictionStatic:.3,restitution:.15,label:'coin'});
+  sc.plugin={red:false,silver:false,moon:false,r:14,born:performance.now()};
+  Composite.add(world,sc);coins.push(sc);
+}
+
 // state
 let score=0,lastDrop=0;
 let stock=25;
